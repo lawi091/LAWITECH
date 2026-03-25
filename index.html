@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SentinelVault: Secure Form & Privacy Suite</title>
+    <script>
+      /**
+       * SentinelVault: Defensive Shield
+       * This script suppresses noise from browser extensions (Zerion, MetaMask, etc.)
+       * that attempt to inject scripts into the sandboxed iframe environment.
+       */
+      (function() {
+        const suppressedPatterns = [
+          'isZerion',
+          'ethereum',
+          'fetch',
+          'Invalid property descriptor',
+          'redefine property'
+        ];
+
+        // 1. Global Error Listener (Capturing phase)
+        window.addEventListener('error', function(event) {
+          const message = (event.message || event.error?.message || '').toLowerCase();
+          if (suppressedPatterns.some(pattern => message.includes(pattern.toLowerCase()))) {
+            event.stopImmediatePropagation();
+            event.preventDefault();
+          }
+        }, true);
+
+        // 2. Promise Rejection Listener
+        window.addEventListener('unhandledrejection', function(event) {
+          const message = (event.reason?.message || String(event.reason)).toLowerCase();
+          if (suppressedPatterns.some(pattern => message.includes(pattern.toLowerCase()))) {
+            event.stopImmediatePropagation();
+            event.preventDefault();
+          }
+        }, true);
+
+        // 3. Pre-emptive Property Definitions
+        // We try to define these as configurable so extensions can overwrite them without error
+        ['ethereum', 'isZerion'].forEach(prop => {
+          if (!(prop in window)) {
+            try {
+              Object.defineProperty(window, prop, {
+                value: undefined,
+                writable: true,
+                configurable: true
+              });
+            } catch (e) {
+              // If we can't define it, it's likely already locked by the environment
+            }
+          }
+        });
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
